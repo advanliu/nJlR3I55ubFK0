@@ -49,6 +49,9 @@ const block = readFileSync('scripts/afk-plugin-block.html', 'utf8');
 if (idx.indexOf('</body>') < 0) throw new Error('上游 index.html 找不到 </body>，無法注入外掛區塊。');
 if (idx.indexOf('afk-toggles.js') >= 0) throw new Error('上游 index.html 竟已含 afk-toggles.js？請人工檢查。');
 idx = idx.replace('</body>', block + '</body>');
+const headBlock = readFileSync('scripts/afk-head-block.html', 'utf8');
+if (idx.indexOf('</head>') < 0) throw new Error('上游 index.html 找不到 </head>，無法注入 head 區塊。');
+idx = idx.replace('</head>', headBlock + '</head>');
 writeFileSync('index.html', idx);
 console.log('[sync] index.html = 上游 + 外掛區塊');
 
