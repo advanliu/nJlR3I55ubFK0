@@ -12,6 +12,8 @@ node_modules/
 
 # Cloudflare Wrangler 本機快取/狀態(cf-sync-trigger 部署時產生,不進 git)
 .wrangler/
+# wrangler dev 的本機密碼(cf-cloudsave 測試用)
+.dev.vars
 
 # OS / 編輯器雜物
 Thumbs.db

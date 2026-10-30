@@ -49,6 +49,7 @@
 | `afk-wiki.js` | 小百科(多分頁+統一搜尋;`?view=wiki` 獨立頁;改內容跑 `/update-wiki`。裝備頁走檔內的**列表篩選引擎** `makeListFilter`:索引→純函式篩選→只畫前 40 列、詳情點開才建;要把它給第二個頁面用再抽成獨立外掛,且那支**不可有開關**) |
 | `afk-storage.js` | 首頁「⚙ 設定」選單(MENU_ITEMS 可擴充)+檢查存檔大小 |
 | `afk-fullsave.js` | 完整資料備份與還原(本機檔案＋**六碼轉移碼**·`storage` 子項)。轉移碼另掛 `fullsavecode` 子項:整包上傳到第三方(Litterbox)、24 小時後自動刪,關掉只剩檔案那半;服務選型(比過 6 家)與「別只看標頭、要拿真 file:// 頁面實測」見 `docs/save-transfer.md`。**整包搬不挑 key**——白名單會跟不上上游、漏搬是安靜失效;還原=`localStorage.clear()` 全清後用 `_lzSetStoredRaw` 原樣寫回(**不可用 `_lzSet`**:它先寫明文再背景壓縮,明文可能當場撐爆配額) |
+| `afk-cloudsave.js` | 雲端備份(`fullsave` 子項;首頁「⚙ 設定 → ☁ 雲端備份」)。把 afk-fullsave 的同一包資料傳到**玩家自己部署的** Cloudflare Worker(`cf-cloudsave/`,KV 保留最近 `KEEP` 份),打包/驗證/確認/寫入全借 `AFK_FULLSAVE`,不另寫一套。自動上傳每 10 分鐘＋切背景(≥1 分鐘),**keys 雜湊與上次相同就跳過**——沒在玩的那台才不會拿舊資料洗掉另一台的新備份。**還原只能手動、只能從首頁進**(理由同 afk-fullsave ⑤)。網址/密碼存 `afk_cloud_cfg` 並登記 `AFK_FULLSAVE.keepKey`:不進備份包(密碼不跟匯出檔外流)、還原時保留這台自己的 |
 | `afk-notice.js` | 首頁公告卡(通用框架;檔頭 `NOTICE=null` 就不顯示,要發公告填一組設定即可) |
 | `afk-quotawarn.js` | 存檔空間警告(localStorage >80% 時首頁紅卡提醒刪角;唯讀;估算與 afk-storage 同套) |
 | `afk-history.js` | 離線掛機紀錄卡片(讀 afk_hist_<slot>,唯讀) |

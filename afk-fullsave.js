@@ -87,11 +87,16 @@
     return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
   }
 
+  // 🔒 「這台裝置自己的」key:不打包、還原時原值留著。名單由**外掛自己登記自己的 key**(afk-cloudsave 的
+  //   伺服器網址/密碼),不是本檔去認遊戲的 key——密碼不該跟著備份檔傳給作者,另一台的設定也不該蓋掉這台的。
+  var _keep = {};
+  function keepKey(k) { if (k) _keep[k] = 1; }
+
   // 檔案裡只有三個「我們自己寫的」欄位:format(認得是不是我們的檔)、exportedAt(給玩家確認)、
   // keyCount(檔案有沒有被截斷)。keys 內容一律原封不動,不解析、不認識、不判斷。
   function buildPack() {
     var keys = {}, n = 0;
-    lsKeys().forEach(function (k) { var v = localStorage.getItem(k); if (v != null) { keys[k] = v; n++; } });
+    lsKeys().forEach(function (k) { if (_keep[k]) return; var v = localStorage.getItem(k); if (v != null) { keys[k] = v; n++; } });
     return { format: FORMAT, schema: SCHEMA, exportedAt: new Date().toISOString(), keyCount: n, keys: keys };
   }
 
@@ -205,10 +210,14 @@
   // 實際寫入:整個清空再原樣寫回。中途失敗立刻停手,回報寫到第幾個。
   function applyPack(pack) {
     var names = Object.keys(pack.keys);
+    var kept = {};
+    Object.keys(_keep).forEach(function (k) { try { var v = localStorage.getItem(k); if (v != null) kept[k] = v; } catch (e) {} });
     try { localStorage.clear(); }
     catch (e) { return { ok: false, done: 0, err: '清除舊資料時失敗：' + (e && e.message || e) }; }
+    Object.keys(kept).forEach(function (k) { try { localStorage.setItem(k, kept[k]); } catch (e) {} });
     for (var i = 0; i < names.length; i++) {
       var k = names[i], okw = false;
+      if (_keep[k]) continue;   // 舊版備份可能帶著這台的設定 key → 一律以這台現有的為準
       try { okw = _lzSetStoredRaw(k, pack.keys[k]) !== false; } catch (e) { okw = false; }
       if (!okw) return { ok: false, err: '儲存空間不足' };
     }
@@ -432,6 +441,15 @@
     ].join('\n');
     (document.head || document.documentElement).appendChild(s);
   }
+
+  // 給其他「換個管道交出去」的外掛(afk-cloudsave)共用:打包、驗證、確認後還原全走同一份,不各寫一套
+  window.AFK_FULLSAVE = {
+    enabled: on,
+    buildPack: buildPack,
+    validate: validate,
+    confirmAndApply: confirmAndApply,
+    keepKey: keepKey
+  };
 
   function init() {
     window.AFK_SETTINGS = window.AFK_SETTINGS || { _items: [], add: function (it) { this._items.push(it); } };

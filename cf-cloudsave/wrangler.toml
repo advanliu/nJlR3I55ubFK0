@@ -1,0 +1,18 @@
+name = "cloudsave"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# 部署後網址:https://cloudsave.<你的子網域>.workers.dev(填進遊戲的「雲端備份」)
+workers_dev = true
+
+# 第一次部署前跑 `npx wrangler kv namespace create SAVES`,把印出來的 id 填進下面
+[[kv_namespaces]]
+binding = "SAVES"
+id = "REPLACE_WITH_KV_ID"
+
+# 密碼不放這裡,用 `npx wrangler secret put SAVE_TOKEN` 設
+[vars]
+# 最多保留幾份備份(超過就刪最舊的)
+KEEP = "20"
+# 允許哪些網頁呼叫(逗號分隔);* = 不限,反正沒有密碼也進不來
+ALLOW_ORIGINS = "*"
