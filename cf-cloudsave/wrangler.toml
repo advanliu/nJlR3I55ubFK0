@@ -8,7 +8,7 @@ workers_dev = true
 # 第一次部署前跑 `npx wrangler kv namespace create SAVES`,把印出來的 id 填進下面
 [[kv_namespaces]]
 binding = "SAVES"
-id = "REPLACE_WITH_KV_ID"
+id = "eea446d1e85748e18e60ac4f0c749728"
 
 # 密碼不放這裡,用 `npx wrangler secret put SAVE_TOKEN` 設
 [vars]
