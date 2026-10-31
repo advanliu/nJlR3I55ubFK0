@@ -45,6 +45,7 @@
 | `afk-statusicon.js` | 手機狀態圖示縮小一半(純 CSS·28→14px、gap 4→2px、隊友藍點 6→4px)。狀態列是絕對定位浮在戰鬥畫面上的,桌機戰鬥區寬、28px 只佔一角;手機整個戰鬥區才 346px,22 個狀態就排成 346×92px 把怪物與角色蓋掉大半(實測)。只用上游那條窄 MQ、不做平板路徑——這是「窄畫面排版優化」而非「手機殼套上了就該有」(判準見 docs/mobile.md),同 afk-mapbar |
 | `afk-slotinfo.js` | 選角卡片疊「掛哪張圖/掛多久」(讀 afk-offline 的 afk_map_/afk_ts_,唯讀) |
 | `afk-createname.js` | 創角畫面加名字欄(上游 startGame 寫死 `player.name = null`,進遊戲要點狀態欄那塊**空白**區域才能改名,玩家找不到)。包 `startGame`,原函式跑完後寫名字並存檔;🚨 以 `enSeed` 前後比對確認「這次真的建了新角色」才寫——存檔位已有角色時 startGame 會提早 return,那時的 player 可能是上一個角色。清理規則照抄核心 `confirmEditName`(去 `<>&"'`、12 字)。欄位不抄 css 的各斷點座標,改成每次開畫面/縮放時量:配點區底部到 `#btn-start` 的縫 ≥ 按鈕高 8 成就塞進去(桌機/平板),否則放「經典模式」下方、與「返回」同排(手機直式是固定像素且 overflow:hidden,只剩那格空) |
+| `afk-cfgleak.js` | 換角色時自動施放設定沿用上一個角色(上游 loadGame 先 `renderSkillSelects()` 保留畫面現值,再以 `if (c.selAtkSkill)` 還原——存「無」不覆寫 → 兩角色都會的攻擊技會被帶過去)。包 `loadGame`:呼叫前把攻擊/治癒/轉換下拉清成「無」、Buff 勾選全取消;載入失敗(`_uiConfigReady` 仍 false)則還原畫面 |
 | `afk-loadslots.js` | 卡片式選角擴到 16 格(搭配補丁3) |
 | `afk-dex.js` | 掉落查詢(五張掉落表+特殊掉落 SPECIAL_BLOCKS;`?view=dex` 獨立頁) |
 | `afk-wiki.js` | 小百科(多分頁+統一搜尋;`?view=wiki` 獨立頁;改內容跑 `/update-wiki`。裝備頁走檔內的**列表篩選引擎** `makeListFilter`:索引→純函式篩選→只畫前 40 列、詳情點開才建;要把它給第二個頁面用再抽成獨立外掛,且那支**不可有開關**) |
