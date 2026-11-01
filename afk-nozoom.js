@@ -19,6 +19,12 @@
  *   雙擊放大是「觸控手勢」問題，跟畫面寬窄無關 —— 平板、以及 iPhone 開「要求電腦版網站」
  *   （視窗寬度變 980）都會落在寬度斷點外，那時整條規則消失、雙擊放大全部回來（玩家回報）。
  * 不讀 afk-mobile 掛的 body.m-mobile ——那支可被玩家關掉，靠它會變成「關了手機版面連雙擊放大也一起回來」的跨外掛耦合。
+ *
+ * iOS 另一種放大:點到字級 < 16px 的輸入框(倉庫數量、HP%/MP% 門檻…)會自動放大、輸入完不縮回。
+ *   作法:只在 iOS 把 viewport 補上 maximum-scale=1——iOS 10 起這個值只擋「聚焦自動放大」,
+ *   兩指捏合照樣能放大(Safari 為無障礙刻意忽略它)。
+ *   ⚠ 只能給 iOS:Android Chrome 會照字面執行 maximum-scale=1,等於把捏合縮放整個關掉。
+ *   不改輸入框字級成 16px:上游一堆窄格子(w-12)會被撐破。
  * 掛接：在 index.html 的 </body> 前 <script src="afk-nozoom.js">。
  * ========================================================================== */
 (function () {
@@ -27,7 +33,27 @@
 
   var TOUCH_MQ = '(pointer: coarse)';   // 只問「主要輸入是手指嗎」,不問畫面寬窄
 
+  // iPadOS 13+ 的 UA 長得跟 Mac 一樣,只能靠「Mac 卻有多點觸控」認出來
+  function isIOS() {
+    var ua = navigator.userAgent || '';
+    return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  }
+
+  function noFocusZoom() {
+    if (!isIOS()) return;
+    var m = document.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = document.createElement('meta'); m.name = 'viewport';
+      m.content = 'width=device-width, initial-scale=1.0';
+      (document.head || document.documentElement).appendChild(m);
+    }
+    var c = m.getAttribute('content') || '';
+    if (/maximum-scale/.test(c)) return;
+    m.setAttribute('content', c + (c ? ', ' : '') + 'maximum-scale=1');
+  }
+
   function init() {
+    try { noFocusZoom(); } catch (e) {}
     if (document.getElementById('afk-nozoom-style')) return;
     var s = document.createElement('style');
     s.id = 'afk-nozoom-style';

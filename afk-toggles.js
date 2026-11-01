@@ -75,7 +75,7 @@
         { id: 'npclist', name: '村莊 NPC 條列式', desc: '村莊改成 NPC 清單，點名字就能互動', group: '遊戲介面' },
         { id: 'mapbar', name: '手機地圖列壓縮', desc: '冒險地圖的標題列壓成兩排，少佔畫面', group: '遊戲介面' },
         { id: 'battlehud', name: '手機戰鬥狀態列', desc: '戰鬥畫面上方多一排：等級、防禦、金幣、經驗與血魔量', group: '遊戲介面' },
-        { id: 'nozoom', name: '手機取消雙擊放大', desc: '連點兩下不會放大畫面（兩指縮放照常）', group: '遊戲介面' },
+        { id: 'nozoom', name: '手機取消自動放大', desc: '連點兩下、點輸入框都不會放大畫面（兩指縮放照常）', group: '遊戲介面' },
         { id: 'statusicon', name: '手機狀態圖示縮小', desc: '手機上的狀態圖示縮成一半，不會蓋住戰鬥畫面', group: '遊戲介面' },
         { id: 'battlebuffs', name: '手機戰鬥狀態欄', desc: '戰鬥框下方直接顯示增益、異常與魔物追蹤', group: '遊戲介面' },
         { id: 'skillbar', name: '手機主動技能列', desc: '戰鬥框下方多一列已學會的手動技能按鈕（絕對屏障、迷魅術…），不用切到技能分頁', group: '遊戲介面' },
