@@ -1,11 +1,10 @@
 /* ============================================================================
- * afk-syncinfo.js — 首頁顯示「原作者 + 加掛版版本號」
+ * afk-syncinfo.js — 首頁顯示「原作者署名 + 正版/社群連結」
  *
- * 本專案自 2026-07 起獨立維護、不再跟進原作者版本;首頁(#main-menu)保留
- * 原作者署名與正版連結,並顯示加掛版自己的版本號(讀根目錄 version.json 的
- * app 欄位,由 /release 發版時 bump),玩家回報問題時能講出所在版本。
- *   - 純讀取 version.json,讀不到就只藏版本列,不影響遊戲。
- *   - 檔名沿用歷史名稱(原本顯示「原版最後同步時間」),避免改名折騰快取與引用。
+ * 純靜態、不發任何網路請求。
+ *   - 原本會 fetch version.json 顯示「最後同步原版時間」:原作者已停更、數值對玩家無意義,
+ *     且 no-store 請求在開機時要排隊(約 3 秒~更久才冒出來),已移除。
+ *   - 檔名沿用歷史名稱,避免改名折騰快取與引用。
  *
  * 掛接:在 index.html 的 </body> 前加一行 <script src="afk-syncinfo.js"></script>
  * ========================================================================== */
@@ -16,14 +15,6 @@
   function ready(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
     else fn();
-  }
-
-  // 最後更新時間顯示：優先用 version.json 的 buildAt(完整「YYYY-MM-DD HH:MM」台灣時間)；
-  //   舊版 version.json 無 buildAt 時退回 build(「MMDD-HHMM」)格式化成「MM/DD HH:MM」(無年份)。
-  function fmtUpdTime(buildAt, build) {
-    if (buildAt && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(buildAt)) return buildAt;
-    var m = /^(\d{2})(\d{2})-(\d{2})(\d{2})$/.exec(build || '');
-    return m ? (m[1] + '/' + m[2] + ' ' + m[3] + ':' + m[4]) : '';
   }
 
   function injectCSS() {
@@ -43,17 +34,15 @@
 
   function init() {
     var menu = document.getElementById('main-menu');
-    if (!menu) { console.warn('[AFK-syncinfo] 找不到 #main-menu,原作者/最後同步資訊不顯示。'); return; }
+    if (!menu) { console.warn('[AFK-syncinfo] 找不到 #main-menu,原作者資訊不顯示。'); return; }
     if (document.getElementById('afk-syncinfo')) return;
     injectCSS();
-    // 頂部:原作者 + 正版最後同步(各自一列;afk-skin 會把這塊排到外掛框最上方)
+    // 頂部:原作者一列(afk-skin 會把這塊排到外掛框最上方)
     var foot = document.createElement('div');
     foot.id = 'afk-syncinfo';
     foot.innerHTML =
       '<div class="afk-si-row"><span class="afk-si-author">原作者：<span class="afk-si-name">秋玥</span></span>' +
-      '（<a class="afk-si-link" href="https://shines871.github.io/idle-lineage-class/" target="_blank" rel="noopener">原版連結</a>）</div>' +
-      '<div class="afk-si-row afk-si-verrow"><span class="afk-si-ver"></span></div>' +
-      '<div class="afk-si-row afk-si-updrow"><span class="afk-si-upd"></span></div>';
+      '（<a class="afk-si-link" href="https://shines871.github.io/idle-lineage-class/" target="_blank" rel="noopener">原版連結</a>）</div>';
     menu.appendChild(foot);
     // 連結:巴哈討論串一列;Line群與Discord群同一列(afk-skin 會排到框內較下方)
     var links = document.createElement('div');
@@ -62,24 +51,7 @@
       '<div class="afk-si-row"><a class="afk-si-link" href="https://forum.gamer.com.tw/C.php?bsn=84452&amp;snA=8362" target="_blank" rel="noopener">巴哈討論串</a>（本加掛版發布在 <a class="afk-si-link" href="https://forum.gamer.com.tw/Co.php?bsn=84452&amp;sn=37297" target="_blank" rel="noopener">301</a> 樓）</div>' +
       '<div class="afk-si-row"><a class="afk-si-link" href="https://line.me/ti/g2/RRXPx6rMc8ZhxiuNSSziKtcjnhc2AXEPuIOpVA?utm_source=invitation&amp;utm_medium=link_copy&amp;utm_campaign=default" target="_blank" rel="noopener">[加入Line群討論]</a> <a class="afk-si-link" href="https://discord.gg/tMcpkK9yUZ" target="_blank" rel="noopener">[加入Discord群]</a></div>';
     menu.appendChild(links);
-    console.log('[AFK-syncinfo] hooks OK — 首頁顯示原作者與加掛版版本號。');
-
-    var verRow = foot.querySelector('.afk-si-verrow'), verEl = foot.querySelector('.afk-si-ver');
-    var updRow = foot.querySelector('.afk-si-updrow'), updEl = foot.querySelector('.afk-si-upd');
-    verRow.style.display = 'none'; updRow.style.display = 'none';   // 讀到才顯示,讀不到整列不佔位
-    // 🔄 2026-07 外掛化架構:核心永遠跟進原版 → 首頁只顯示「最後同步原版時間」,不寫「已跟進原版 vX」那行(使用者要求)。
-    //   時間讀 version.json 的 upstreamAt(=upstream-checkpoint.json 的 syncedAt,只有真的同步上游才變);
-    //   舊版 version.json 沒這欄才退回 buildAt(那是我方建置時間,改外掛也會動)。verRow 保留 DOM 但不再填內容。
-    // file:// 無法 fetch(CORS,origin null)→ 不顯示同步時間;http(s) 才去抓
-    if (!/^https?:$/.test(location.protocol)) return;
-    fetch('version.json', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (!j) return;
-        var t = fmtUpdTime(j.upstreamAt || j.buildAt, j.build);
-        if (t) { updEl.innerHTML = '最後同步原版 ' + t; updRow.style.display = ''; }
-      })
-      .catch(function () { /* 讀不到就只顯示版本 */ });
+    console.log('[AFK-syncinfo] hooks OK — 首頁顯示原作者與連結。');
   }
 
   ready(init);
