@@ -2,7 +2,7 @@
  * afk-mercfilter.js — 戰鬥日誌:每位傭兵各一顆篩選鈕
  *
  * 上游戰鬥日誌的過濾列只有一顆「傭兵」(全部傭兵一起開關)。隊上有三位傭兵時,想只看法師在放什麼、
- *   或把騎士的普攻訊息收起來,做不到。本外掛在「傭兵」鈕後面,依目前出戰的傭兵各補一顆(顯示傭兵名),
+ *   或把騎士的普攻訊息收起來,做不到。本外掛在過濾列下方另起一行,依目前出戰的傭兵各補一顆(顯示傭兵名),
  *   點亮/點暗只影響那一位的訊息;「傭兵」總鈕關掉時整批照舊全收(核心那條 CSS 規則),本外掛不碰。
  *
  * 作法:
@@ -69,20 +69,26 @@
   }
 
   function clearPills() {
-    var old = document.querySelectorAll('.afk-mf-pill');
-    for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
+    var old = document.getElementById('afk-mf-row');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
   }
 
   function build() {
-    var anchor = document.getElementById('cf-btn-mercenary');
-    if (!anchor || !anchor.parentNode) return;
+    var bar = document.getElementById('combat-filter-pills');
+    if (!bar || !bar.parentNode) return;
     var list = on() ? names() : [];
     var sig = list.join('|');
-    if (sig === _sig && (!list.length || document.querySelector('.afk-mf-pill'))) return;
+    if (sig === _sig && (!list.length || document.getElementById('afk-mf-row'))) return;
     _sig = sig;
     clearPills();
     applyStyle();
-    var ref = anchor;
+    if (!list.length) return;
+    // 另起一行(整條過濾列的下一行):塞在「傭兵」鈕後面會把「召喚／夥伴」擠到第二行、拆散原本的順序
+    var row = document.createElement('div');
+    row.id = 'afk-mf-row';
+    row.className = 'flex items-center gap-1 flex-wrap justify-end';
+    row.style.flex = '1 1 100%';
+    bar.parentNode.insertBefore(row, bar.nextSibling);
     list.forEach(function (n) {
       var b = document.createElement('button');
       b.type = 'button';
@@ -96,8 +102,7 @@
         b.classList.toggle('cf-off', !!hidden[n]);
         save(); applyStyle();
       });
-      ref.parentNode.insertBefore(b, ref.nextSibling);
-      ref = b;
+      row.appendChild(b);
     });
   }
 
