@@ -73,12 +73,21 @@
     if (old && old.parentNode) old.parentNode.removeChild(old);
   }
 
+  // 個別鈕只在「戰鬥日誌分頁」且「傭兵」總鈕亮著時顯示:系統日誌分頁沒有過濾列、總鈕關掉時整批傭兵訊息本來就全收,留著個別鈕只會誤導
+  function syncVisible() {
+    var row = document.getElementById('afk-mf-row'); if (!row) return;
+    var bar = document.getElementById('combat-filter-pills');
+    var show = !!bar && !bar.classList.contains('hidden');
+    try { if (typeof _combatFilter !== 'undefined' && _combatFilter && _combatFilter.mercenary === false) show = false; } catch (e) {}
+    row.style.display = show ? '' : 'none';
+  }
+
   function build() {
     var bar = document.getElementById('combat-filter-pills');
     if (!bar || !bar.parentNode) return;
     var list = on() ? names() : [];
     var sig = list.join('|');
-    if (sig === _sig && (!list.length || document.getElementById('afk-mf-row'))) return;
+    if (sig === _sig && (!list.length || document.getElementById('afk-mf-row'))) { syncVisible(); return; }
     _sig = sig;
     clearPills();
     applyStyle();
@@ -105,7 +114,14 @@
       });
       row.appendChild(b);
     });
+    syncVisible();
   }
+
+  // 切分頁／開關總鈕時立刻跟著變(包兩個核心入口,送完原函式再同步;輪詢只是保底)
+  ['switchLogTab', 'toggleCombatFilter'].forEach(function (fn) {
+    var o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function () { var r = o.apply(this, arguments); try { syncVisible(); } catch (e) {} return r; };
+  });
 
   // 傭兵名單變動不頻繁:低頻輪詢比對簽章,變了才重建(不去包招募/解散函式,少一個耦合點)
   setInterval(function () { try { build(); } catch (e) {} }, 2000);
