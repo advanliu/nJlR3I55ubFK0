@@ -94,7 +94,7 @@
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'cf-pill afk-mf-pill' + (hidden[n] ? ' cf-off' : '');
-      b.setAttribute('style', 'color:#6ee7b7;border-color:#047857;background:rgba(6,78,59,.18)');
+      b.setAttribute('style', 'color:#6ee7b7;border-color:#047857;background:rgba(6,78,59,.18);max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap');
       b.title = '點亮/點暗：' + n + ' 的戰鬥訊息';
       b.textContent = n;
       b.addEventListener('click', function () {
