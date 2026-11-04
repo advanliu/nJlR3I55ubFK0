@@ -1100,7 +1100,7 @@
     { k: 'mode', n: '遊戲模式' },
     { k: 'npc', n: 'NPC總覽' }
   ];
-  var state = { tab: 'equipbook', cls: 'knight', q: '', magicCls: 'all', magicChar: '', collMode: null, relicRegion: 'all', combatCls: '', polyRange: 'all', polySort: 'lv', polySortDesc: false };   // 預設分頁=分頁列第一個(收藏-裝備)。裝備頁的篩選/排序條件由列表篩選引擎(EQ_LF.state)自己保管,不放這裡
+  var state = { tab: 'equipbook', cls: 'knight', q: '', magicCls: 'all', magicChar: '', magicNoCommon: false, collMode: null, relicRegion: 'all', combatCls: '', polyRange: 'all', polySort: 'lv', polySortDesc: false };   // 預設分頁=分頁列第一個(收藏-裝備)。裝備頁的篩選/排序條件由列表篩選引擎(EQ_LF.state)自己保管,不放這裡
   // 搜尋打字防抖:每次按鍵只重設計時器,停手這麼久才真的過濾+重渲染(降低逐字輸入的 INP)。
   var SEARCH_DEBOUNCE_MS = 150;
   var _searchTimer = null;
@@ -1215,6 +1215,8 @@
     // 職業魔法分頁「選擇角色」下拉(body innerHTML 重繪後仍有效)
     document.getElementById('m-wiki-body').addEventListener('change', function (e) {
       if (EQ_LF && EQ_LF.onChange(e)) return;   // 裝備頁的排序下拉
+      var nc = e.target.closest ? e.target.closest('[data-magicnocommon]') : null;
+      if (nc) { state.magicNoCommon = !!nc.checked; render(); return; }
       var sel = e.target.closest ? e.target.closest('[data-magicchar]') : null;
       if (!sel) return;
       state.magicChar = sel.value;
@@ -4721,6 +4723,7 @@
     if (magicCls !== 'all') {
       html += charSelectHTML(magicCls);
       if (state.magicChar) learnedSet = charLearnedSet(state.magicChar);
+      if (magicCls !== 'mage') html += '<label class="m-wiki-nocommon"><input type="checkbox" data-magicnocommon' + (state.magicNoCommon ? ' checked' : '') + '> 排除共同魔法（只看這個職業專屬的）</label>';
     }
     // ⚔️ 攻擊魔法實際傷害公式(以 castSkill 為準):別只比「威力」骰子,階級係數才是大頭
     html += '<div class="m-wiki-note">⚔️ 每段傷害 ≈ <b>（骰子＋魔法傷害＋固定加值）×（1＋3×額外魔法點數÷32）×（1＋階級÷10）</b>，最後被目標魔防減免——<b>骰子小但固定加值高的高階魔法往往更強</b>。<br>⚠️ 魔法傷害<b>只由智力換算</b>，所有攻擊魔法都吃智、不吃力（含龍騎的岩漿噴吐／岩漿之箭）；<b>治癒術只吃智力</b>，不吃魔法傷害與階級。</div>';
@@ -4730,6 +4733,7 @@
         var sk = DB.skills[id]; if (!sk || !sk.n) continue;
         var lv = reqLvForClass(magicCls, id, sk);
         if (lv === undefined) continue;
+        if (state.magicNoCommon && magicCls !== 'mage' && magicCat(id, sk) === 'mage') continue;   // 共同魔法＝法師魔法池(其他職業到對應等級也能學的那批)
         var needMastery = (magicCls === 'elf' && sk.reqE === undefined && typeof MAGIC_MASTERY_SKILLS !== 'undefined' && MAGIC_MASTERY_SKILLS.indexOf(id) >= 0);
         rows.push({ id: id, sk: sk, lv: lv, needMastery: needMastery });
       }
@@ -4875,6 +4879,8 @@
       '.m-wiki-charsel{display:flex;align-items:center;gap:8px;margin:4px 2px 8px;flex-wrap:wrap;}',
       '.m-wiki-charsel label{font-size:13px;color:#cbd5e1;font-weight:bold;flex:none;}',
       '.m-wiki-charsel select{flex:1 1 160px;min-width:140px;background:#111c30;border:1px solid #334155;color:#e2e8f0;border-radius:7px;padding:6px 8px;font-size:13px;font-family:inherit;cursor:pointer;}',
+      '.m-wiki-nocommon{display:flex;align-items:center;gap:8px;margin:4px 2px 8px;font-size:13px;color:#cbd5e1;font-weight:bold;cursor:pointer;}',
+      '.m-wiki-nocommon input{width:18px;height:18px;flex:none;cursor:pointer;}',
       '.m-wiki-charsel-hint{font-size:11.5px;color:#94a3b8;flex:1 1 100%;}',
       '.m-wiki-spell-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}',
       '.m-wiki-spell-n{font-size:14px;font-weight:bold;color:#fff;}',
