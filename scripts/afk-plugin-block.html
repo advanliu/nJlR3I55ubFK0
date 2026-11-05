@@ -4,6 +4,59 @@
          把 NPC/怪物 sprite 反成白色人形（每張圖各自判定，所以只有部分中；重繪、重新登入、清快取都無效）。
          無開關：這是顯示正確性，不是功能。實測 forceDarkModeEnabled+darkModeImagePolicy=smart 可重現、加這行即解。 -->
     <style>:root{color-scheme:dark}</style>
+    <!-- afk-loadguard：外掛腳本載入失敗時自動重抓、列出失敗清單並提供「重新下載」（內嵌在首頁、無開關、不依賴任何外掛——自己不能是另一個會載入失敗的檔案） -->
+    <script>
+    (function () {
+      var failed = {}, done = {}, bar = null;
+      function nm(u) { var m = /\/(afk-[\w-]+)\.js/.exec(u); return m ? m[1] : u; }
+      window.addEventListener('error', function (e) {
+        var t = e && e.target;
+        if (t && t.tagName === 'SCRIPT' && t.src && /\/afk-[\w-]+\.js/.test(t.src) && !done[t.src]) failed[t.src] = failed[t.src] || '';
+      }, true);
+      function run(url) {
+        function get(u) {
+          return fetch(u, { cache: 'reload' }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+          });
+        }
+        return get(url).catch(function () { return get(url + (url.indexOf('?') < 0 ? '?' : '&') + '_r=' + Date.now()); })
+          .then(function (code) {
+            var s = document.createElement('script');
+            s.textContent = code + '\n//# sourceURL=' + url;
+            document.body.appendChild(s);
+            done[url] = 1; delete failed[url];
+          }, function (err) { failed[url] = String((err && err.message) || '連線失敗'); });
+      }
+      function retryAll() {
+        return Promise.all(Object.keys(failed).map(run)).then(render);
+      }
+      function render() {
+        var urls = Object.keys(failed);
+        if (!urls.length) { if (bar && bar.parentNode) bar.parentNode.removeChild(bar); bar = null; return; }
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.style.cssText = 'position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);z-index:2147483000;background:#1e293b;color:#e2e8f0;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;display:flex;gap:10px;align-items:center;';
+          document.body.appendChild(bar);
+        }
+        var why = urls.map(function (u) { return nm(u) + (failed[u] ? '（' + failed[u] + '）' : ''); }).join('、');
+        bar.innerHTML = '';
+        var txt = document.createElement('div'); txt.style.flex = '1';
+        txt.textContent = urls.length + ' 支外掛載入失敗：' + why;
+        var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '重新下載';
+        btn.style.cssText = 'flex:none;background:#2563eb;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;';
+        btn.onclick = function () { btn.disabled = true; btn.textContent = '下載中…'; retryAll(); };
+        var x = document.createElement('button'); x.type = 'button'; x.textContent = '×';
+        x.style.cssText = 'flex:none;background:none;color:#94a3b8;border:0;font-size:20px;padding:0 4px;';
+        x.onclick = function () { if (bar && bar.parentNode) bar.parentNode.removeChild(bar); bar = null; };
+        bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(x);
+      }
+      window.addEventListener('load', function () {
+        setTimeout(function () { if (Object.keys(failed).length) retryAll(); }, 800);
+      });
+      try { console.log('[AFK-loadguard] hooks OK'); } catch (e) {}
+    })();
+    </script>
     <!-- afk-toggles 必須最先載入：外掛開關中樞（逃生門，自己不可被關；某支外掛壞掉時玩家關掉它就能用原版繼續玩） -->
     <script src="afk-toggles.js"></script>
     <!-- afk-banner：非官方轉載橫幅讓位（基礎設施、無開關；不可掛在 afk-mobile 裡，玩家關掉手機版面就會整個頂端被蓋住） -->
