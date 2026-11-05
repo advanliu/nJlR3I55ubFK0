@@ -33,6 +33,22 @@
     return out;
   }
 
+  // 在 shareTeamBuffs 裡扣的:列出隊長「學了+身上有」的可分享增益,以及目前缺它的隊友(扣款發生在補上之前,所以缺者還看得到)
+  function shareInfo() {
+    var out = [];
+    try {
+      if (typeof TEAM_SHARE_BUFFS === 'undefined') return '';
+      var al = (player.allies || []).filter(function (a) { return a && !a._downed; });
+      (player.skills || []).forEach(function (sid) {
+        if (!TEAM_SHARE_BUFFS.has(sid) || !((player.buffs || {})[sid] > 0)) return;
+        var sk = DB.skills[sid] || {};
+        var lack = al.filter(function (a) { return !((a.buffs || {})[sid] > 0); }).map(function (a) { return a._allyName; });
+        out.push((sk.n || sid) + '(' + sid + ',耗' + (sk.mp || '?') + ')缺:' + (lack.join('/') || '無'));
+      });
+    } catch (e) {}
+    return out.join('；');
+  }
+
   function attach(p) {
     var v = p.mp;
     try {
@@ -43,7 +59,9 @@
           try {
             if (on() && typeof nv === 'number' && typeof v === 'number' && v - nv >= THRESHOLD) {
               var where = ''; try { where = mapState.current; } catch (e) {}
-              var msg = '[MP追蹤] ' + v + '→' + nv + '（' + where + '）← ' + frames().join(' ← ');
+              var fr = frames();
+              var msg = '[MP追蹤] ' + v + '→' + nv + '（' + where + '）← ' + fr.join(' ← ');
+              if (fr.indexOf('shareTeamBuffs') >= 0) msg += ' ｜可分享:' + shareInfo();
               console.warn(msg);
               if (typeof logSys === 'function') logSys('<span class="text-amber-300">' + msg.replace(/</g, '&lt;') + '</span>');
             }
