@@ -11,7 +11,7 @@
  *   - 隱藏用一份自己的 <style>:`#combat-log [data-merc="名字"]{display:none}`,既有與未來的訊息一併套用。
  *   - 鈕由 player.allies 目前的名單產生,名單變了(招募/解散/換人)才重建。
  *   - 隱藏名單存 localStorage `afk_mercfilter_v1`(只是每位玩家自己的顯示偏好;讀寫失敗當沒有)。
- *   名字取不到的傭兵訊息(少數寫法沒帶「協力·」)只受總鈕管,不受個別鈕影響。
+ *   「協力·」取不到名字時,再拿目前傭兵名單比對訊息開頭(「<名> 的 技能」「協力傭兵 <名>」);仍取不到的只受總鈕管。
  * ========================================================================== */
 (function () {
   'use strict';
@@ -38,12 +38,16 @@
   window.logCombat = function (msg, type, src) {
     var r = _orig.apply(this, arguments);
     try {
-      if (on() && typeof msg === 'string' && msg.indexOf('協力·') >= 0) {
+      if (on() && typeof msg === 'string') {
         var el = document.getElementById('combat-log');
         var last = el && el.lastElementChild;
         if (last && last.getAttribute('data-src') === 'mercenary' && !last.hasAttribute('data-merc')) {
-          var m = NAME_RE.exec(msg);
-          if (m) last.setAttribute('data-merc', m[1]);
+          var m = NAME_RE.exec(msg), who = m && m[1];
+          if (!who) {   // 技能訊息寫成「傭兵名 的 技能」、「協力傭兵 傭兵名 …」(沒有「協力·」)→ 拿目前名單比對訊息開頭
+            var plain = msg.replace(/<[^>]*>/g, '').replace(/^\s+/, '');
+            names().some(function (n) { if (plain.indexOf(n + ' 的 ') === 0 || plain.indexOf('協力傭兵 ' + n) === 0) { who = n; return true; } return false; });
+          }
+          if (who) last.setAttribute('data-merc', who);
         }
       }
     } catch (e) {}
