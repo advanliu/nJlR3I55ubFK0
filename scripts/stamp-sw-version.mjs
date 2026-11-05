@@ -36,6 +36,21 @@ function nowTaipeiFull() {
   return `${o.year}-${o.month}-${o.day} ${o.hour}:${o.minute}`;
 }
 
+// pageSig:index.html 裡全部 <script src="…?v=…"> 字串排序後的 djb2 短碼。⚠️ 演算法必須與 afk-ver.js 的 sig()/pageSig() 完全一致
+//   (首頁最下方顯示「畫面載入的版本」並與 version.json 的 pageSig 比對)。
+function pageSig() {
+  if (!existsSync('index.html')) return '';
+  const html = readFileSync('index.html', 'utf8');
+  const list = [];
+  const re = /<script\s+[^>]*?src="([^"]*\?v=[^"]*)"/g;
+  let m; while ((m = re.exec(html))) list.push(m[1]);
+  if (!list.length) return '';
+  const str = list.slice().sort().join('\n');
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (((h << 5) + h) + str.charCodeAt(i)) >>> 0;
+  return h.toString(16).padStart(8, '0');
+}
+
 export function stampSwVersion() {
   if (!existsSync(SW_FILE)) { console.warn('[stamp] 找不到 sw.js，略過'); return null; }
   // ⚠ 先把 CRLF 正規化成 LF 再雜湊(與 stamp-code-versions 同理):Windows autocrlf checkout 的工作樹
@@ -83,7 +98,7 @@ export function stampSwVersion() {
     const _cp = JSON.parse(readFileSync('upstream-checkpoint.json', 'utf8'));
     upstreamAt = String(_cp.syncedAt || '').replace(/\s*\(UTC\+8\)\s*$/, '').trim();
   } catch { /* 沒有 checkpoint 就留空，頁面端自己退回 buildAt */ }
-  const vjson = JSON.stringify({ code: version, build: buildNow, buildAt, ...(upstreamAt ? { upstreamAt } : {}), ...(app ? { app } : {}) }) + '\n';
+  const vjson = JSON.stringify({ code: version, build: buildNow, buildAt, pageSig: pageSig(), ...(upstreamAt ? { upstreamAt } : {}), ...(app ? { app } : {}) }) + '\n';
   if (!existsSync('version.json') || readFileSync('version.json', 'utf8') !== vjson) {
     writeFileSync('version.json', vjson);
     console.log('[stamp] version.json →', version, buildNow);
