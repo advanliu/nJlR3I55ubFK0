@@ -85,6 +85,9 @@
     };
 
     function showToast(msgs) {
+      // 系統日誌面板開著時訊息已在眼前,不再浮一張(也避免疊在面板上)
+      var sheet = document.getElementById('m-log-sheet');
+      if (sheet && window.getComputedStyle(sheet).display !== 'none') return;
       var wrap = ensureContainer();
       var card = document.createElement('div');
       card.className = 'm-toast';
@@ -112,16 +115,16 @@
         });
         setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 400);
       }
-      card.addEventListener('click', kill);   // 點 toast 一下提早關
       setTimeout(kill, TOAST_MS);
     }
 
     function injectCSS() {
       var css = [
-        /* 浮在畫面最頂端,刻意不讓開官方版指引橫幅——直接蓋在它上面(使用者要求),把遊戲畫面完整留給遊戲。
-           z-index 用 int 上限與橫幅打平,再靠 DOM 順序壓過它(見 ensureContainer)。toast 是點擊回饋、3.5 秒自動消失。 */
-        '#m-toast-wrap{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:2147483647;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);pointer-events:none;}',
-        '#m-toast-wrap .m-toast{pointer-events:auto;background:rgba(15,23,42,.96);border:1px solid #334155;border-left:3px solid #38bdf8;border-radius:10px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#e2e8f0;font-size:14px;line-height:1.5;word-break:break-word;opacity:0;transform:translateY(-10px);transition:opacity .22s ease,transform .22s ease;}',
+        /* 浮在底部導覽列正上方(--m-nav-h 由 afk-mobile 量測;本外掛已併入「手機版面」開關,關掉時整支不跑)。
+           頂端放過:會蓋住血條/選單,而且當時還吃點擊。現在 pointer-events:none——點擊直接穿透到底下的按鈕。
+           z-index 用 int 上限(需壓過浮動窗),toast 是點擊回饋、3.5 秒自動消失。 */
+        '#m-toast-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--m-nav-h,0px) + 8px);z-index:2147483647;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);pointer-events:none;}',
+        '#m-toast-wrap .m-toast{pointer-events:none;background:rgba(15,23,42,.96);border:1px solid #334155;border-left:3px solid #38bdf8;border-radius:10px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#e2e8f0;font-size:14px;line-height:1.5;word-break:break-word;opacity:0;transform:translateY(10px);transition:opacity .22s ease,transform .22s ease;}',
         '#m-toast-wrap .m-toast.m-toast-in{opacity:1;transform:translateY(0);}',
         '#m-toast-wrap .m-toast-line + .m-toast-line{margin-top:4px;}',
         '#m-toast-wrap .m-toast-more{color:#94a3b8;font-size:12px;margin-bottom:4px;}'

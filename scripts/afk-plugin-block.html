@@ -51,9 +51,9 @@
         x.onclick = function () { if (bar && bar.parentNode) bar.parentNode.removeChild(bar); bar = null; };
         bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(x);
       }
-      window.addEventListener('load', function () {
-        setTimeout(function () { if (Object.keys(failed).length) retryAll(); }, 800);
-      });
+      // 不等 load(load 會等所有圖/資源,手機上可能很晚甚至不來):同步腳本的失敗在 DOMContentLoaded 前都已發生
+      function kick() { setTimeout(function () { if (Object.keys(failed).length) retryAll(); }, 800); }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', kick); else kick();
       try { console.log('[AFK-loadguard] hooks OK'); } catch (e) {}
     })();
     </script>
