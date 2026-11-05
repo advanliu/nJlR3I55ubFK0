@@ -502,7 +502,9 @@ function killMob(idx) {
 
     // === 🔧 萬能藥稀有掉落：等級 40 以上、非血盟。一般敵人 0.01%；頭目 1%（排除夢幻之島頭目），擊殺後隨機掉落 6 種萬能藥之一 ===
     if (!_kbNoReward && !mob.siegeV2 && (mob.lv || 0) >= 40 && mob.race !== '血盟') {   // 🗝️ 軍王之室小怪／城戰 V2 守軍不進萬能藥掉落
-        let _panRate = mob.boss ? (mapState.current === 'dream_island' ? 0 : 0.01) : 0.0001;   // 頭目 1%（夢幻之島頭目除外）／一般敵人 0.01%
+        let _panRate = mob.boss ? (mapState.current === 'dream_island' ? 0 : 0.01) : 0.0001;
+        /* 🔌 加掛版補丁:讓外掛改萬能藥掉落機率(回非數字或外掛未載 → 原值) */
+        if (typeof window !== 'undefined' && typeof window.__afkPanRate === 'function') { let _r = window.__afkPanRate(_panRate, mob); if (typeof _r === 'number' && _r >= 0) _panRate = _r; }   // 頭目 1%（夢幻之島頭目除外）／一般敵人 0.01%
         if (_panRate > 0 && Math.random() < partyDropRate(_panRate * classicDropMult())) {
             const _PANACEA = ['panacea_str', 'panacea_dex', 'panacea_con', 'panacea_int', 'panacea_wis', 'panacea_cha'];
             let _pid = _PANACEA[Math.floor(Math.random() * _PANACEA.length)];

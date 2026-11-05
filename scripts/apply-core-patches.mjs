@@ -430,7 +430,29 @@ function patchBuyerEnHook() {
   console.log(`[patch] 收購強化值判定開放給外掛（${FILE}）`);
 }
 
-const PATCHES = [patchMaybeSpawnMobs, patchTradEnHook, patch16Slots, patchPetAnimTicker, patchBossHuntEscape, patchUseItemKeepModal, patchSellNowNoForce, patchInsigniaOrder, patchGiltasWandRecompute, patchEyeSlotInEquipList, patchRelicAffixHook, patchIllusionSetWpnProc, patchBuyerEnHook];
+// ── 補丁 14：萬能藥的「一般怪稀有掉落」機率開放給外掛（afk-panacea 可把野怪掉落關成 0）──────────
+//   掉落機率寫死在擊殺結算（js/05）與離線結算（js/27）兩處的區域變數裡,外掛包不到（區域 let、無函式可包）。
+//   各補一行:算出機率後問 window.__afkPanRate(rate, mob),回數字就用它;外掛沒載/被關 → 原值不變,與上游一致。
+function patchPanaceaRateHook() {
+  const TARGETS = [
+    { file: 'js/05-kill-progression.js', anchor: "let _panRate = mob.boss ? (mapState.current === 'dream_island' ? 0 : 0.01) : 0.0001;", v: '_panRate' },
+    { file: 'js/27-offline-rewards.js',  anchor: "let panRate = mob.boss ? (map === 'dream_island' ? 0 : 0.01) : 0.0001;", v: 'panRate' }
+  ];
+  for (const t of TARGETS) {
+    let s = readFileSync(t.file, 'utf8');
+    if (s.includes('__afkPanRate')) { already++; continue; }   // 冪等
+    if (s.indexOf(t.anchor) < 0) throw new Error(`[${t.file}] 找不到萬能藥掉落機率錨點——上游可能改寫了該段,請人工確認(供「萬能藥商店化」外掛關閉野怪掉落)。`);
+    const hook = `
+        /* 🔌 加掛版補丁:讓外掛改萬能藥掉落機率(回非數字或外掛未載 → 原值) */
+        if (typeof window !== 'undefined' && typeof window.__afkPanRate === 'function') { let _r = window.__afkPanRate(${t.v}, mob); if (typeof _r === 'number' && _r >= 0) ${t.v} = _r; }`;
+    s = s.replace(t.anchor, t.anchor + hook);
+    if (!CHECK) writeFileSync(t.file, s);
+    changed++;
+    console.log(`[patch] 萬能藥掉落機率鉤子（${t.file}）`);
+  }
+}
+
+const PATCHES = [patchMaybeSpawnMobs, patchTradEnHook, patch16Slots, patchPetAnimTicker, patchBossHuntEscape, patchUseItemKeepModal, patchSellNowNoForce, patchInsigniaOrder, patchGiltasWandRecompute, patchEyeSlotInEquipList, patchRelicAffixHook, patchIllusionSetWpnProc, patchBuyerEnHook, patchPanaceaRateHook];
 
 try {
   for (const p of PATCHES) p();

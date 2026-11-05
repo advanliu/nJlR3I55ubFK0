@@ -1226,6 +1226,8 @@
             //   → 頭目短缺 100 倍、血盟怪反而多掉（線上根本不掉）。
             if (mob.lv >= 40 && mob.race !== '血盟' && !mob.siegeV2) {
                 let panRate = mob.boss ? (map === 'dream_island' ? 0 : 0.01) : 0.0001;
+        /* 🔌 加掛版補丁:讓外掛改萬能藥掉落機率(回非數字或外掛未載 → 原值) */
+        if (typeof window !== 'undefined' && typeof window.__afkPanRate === 'function') { let _r = window.__afkPanRate(panRate, mob); if (typeof _r === 'number' && _r >= 0) panRate = _r; }
                 if (panRate > 0) {
                     let panacea = _offlineBinomial(kills, Math.min(1, panRate * classic * party));
                     let split = _offlineSplitUniform(['panacea_str','panacea_dex','panacea_con','panacea_int','panacea_wis','panacea_cha'], panacea);
