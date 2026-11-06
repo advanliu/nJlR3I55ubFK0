@@ -11,7 +11,8 @@
  *   - 隱藏用一份自己的 <style>:`#combat-log [data-merc="名字"]{display:none}`,既有與未來的訊息一併套用。
  *   - 鈕由 player.allies 目前的名單產生,名單變了(招募/解散/換人)才重建。
  *   - 隱藏名單存 localStorage `afk_mercfilter_v1`(只是每位玩家自己的顯示偏好;讀寫失敗當沒有)。
- *   「協力·」取不到名字時,再拿目前傭兵名單比對訊息開頭(「<名> 的 技能」「協力傭兵 <名>」);仍取不到的只受總鈕管。
+ *   「協力·」取不到名字時,再拿目前傭兵名單比對訊息開頭(「<名> 的 技能」「協力傭兵 <名>」);還取不到(如「怪物 抵抗了立方」)
+ *   就算給「正在行動的那位傭兵」(包住各傭兵行動入口記錄);都沒有的只受總鈕管。
  * ========================================================================== */
 (function () {
   'use strict';
@@ -34,6 +35,19 @@
 
   var NAME_RE = /協力·([^·<>\s】]+)/;
 
+  // 記錄「目前輪到哪位傭兵行動」:包住各傭兵行動入口(巢狀時進出各還原一層)。logCombat 若認不出名字就算給他
+  var _actor = null;
+  ['allyAttackOnce', 'allyCubeTick', 'allyStormTick', 'allyMageAct', 'allyElfAct', 'allyDarkAct', 'allyKnightAct', 'allyWarriorAct',
+   'allyRoyalAct', 'allyRoyalFreeCast', 'allyDragonAct', 'allyIllusionAct', 'allyCastMagic', 'allyCastNonDamage', 'allyCastPhysicalSkill',
+   'allyCastCrush', 'allyCastFixedStatus', 'allyCastSlaughter', 'allyCastMpDmg', 'allyProcFreeMagicSkill', 'allyWeaponProcs', 'allyOnHitEffects'
+  ].forEach(function (fn) {
+    var o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function (ally) {
+      var prev = _actor; _actor = ally;
+      try { return o.apply(this, arguments); } finally { _actor = prev; }
+    };
+  });
+
   var _orig = window.logCombat;
   window.logCombat = function (msg, type, src) {
     var r = _orig.apply(this, arguments);
@@ -47,6 +61,7 @@
             var plain = msg.replace(/<[^>]*>/g, '').replace(/^\s+/, '');
             names().some(function (n) { if (plain.indexOf(n + ' 的 ') === 0 || plain.indexOf('協力傭兵 ' + n) === 0) { who = n; return true; } return false; });
           }
+          if (!who && _actor && _actor._allyName) who = _actor._allyName;   // 怪物「抵抗了立方」這類不帶名字的行 → 算給正在行動的那位傭兵
           if (who) last.setAttribute('data-merc', who);
         }
       }
