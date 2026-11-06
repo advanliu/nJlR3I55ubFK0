@@ -103,6 +103,7 @@
 | `afk-ver.js` | 首頁最下方顯示「這個畫面載入的版本短碼」(index 內全部 `<script src=…?v=…>` 排序後 djb2),並與 `version.json` 的 `pageSig` 比對:一致=已是最新,不一致=提醒完全關掉重開。`pageSig` 由 `scripts/stamp-sw-version.mjs` 以同一演算法寫入——兩端演算法必須一致。 |
 | `afk-sharegate.js` | 隊長只分享「技能頁有勾自動施放」的增益:包 `shareTeamBuffs`,隊長當分享者時暫時把 `player.skills` 篩掉沒勾的清單技能(原版不看勾選,且隊長身上的增益常是傭兵先分享的→轉發給其他傭兵白扣隊長 MP)。傭兵當分享者不動。 |
 | `afk-selfmark.js` | 隊伍面板傭兵「自動維持」勾選列:對「分類=自我增益且不在 `TEAM_SHARE_BUFFS`」的項目尾端標小「自」(只加持施放者自己、不分享),標題旁補圖例。包 `_allyAutoBuffChips` 只改回傳 HTML。 |
+| `afk-slotswap.js` | 選角畫面動作列加「對調位置」鈕:選中有角色的格→輸入目標格號→兩格 `lineage_idle_save_<n>`(含 `_bak`)原字串互換,先記原值、寫後讀回比對、失敗還原。不解析存檔;倉庫全帳號單一 key 不用搬。傭兵來源是被對調的格會被核心 purgeReplacedAllies 解散(確認文字已提醒)。toggle `slotswap` |
 | `afk-mptrace.js` | 診斷(預設關・查完即移除):隊長 MP 一次掉 8 以上時,把呼叫堆疊寫進系統日誌。 |
 | `afk-animretry.js` | 動畫幀載入失敗自動重試。上游 `_probeFramesWin` 快路徑把某動畫全部幀同時發出、任一幀 onerror 就截斷到連續段並整局記在 `_mobAnimCache`,行動網路一次短暫失敗就讓怪/職業幀缺半截到重開為止。本檔包它:manifest 說 N 幀結果 <N 時最多重跑 2 次(0.6s/1.5s)。manifest 未涵蓋的探測路徑不處理 |
 | (內嵌) afk-loadguard | `afk-*.js` 載入失敗時自動重抓(fetch cache:reload,失敗再加 `_r=` 重試),仍失敗就在畫面底部列出失敗檔名與原因(HTTP 狀態/連線失敗)並給「重新下載」鈕;重抓成功用內嵌 `<script>` 執行。**內嵌在 afk-plugin-block/index.html 最前面、無開關、不依賴任何外掛**——它若是獨立檔,自己載入失敗就沒人救。對應手機上「新版外掛檔一直載入失敗」(診斷「最近錯誤」有 script 載入失敗) |
