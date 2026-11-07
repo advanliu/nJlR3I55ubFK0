@@ -1100,7 +1100,7 @@
     { k: 'mode', n: '遊戲模式' },
     { k: 'npc', n: 'NPC總覽' }
   ];
-  var state = { tab: 'equipbook', cls: 'knight', q: '', magicCls: 'all', magicChar: '', magicNoCommon: false, collMode: null, relicRegion: 'all', combatCls: '', polyRange: 'all', polySort: 'lv', polySortDesc: false };   // 預設分頁=分頁列第一個(收藏-裝備)。裝備頁的篩選/排序條件由列表篩選引擎(EQ_LF.state)自己保管,不放這裡
+  var state = { tab: 'equipbook', cls: 'knight', q: '', magicCls: 'all', magicChar: '', magicNoCommon: false, collMode: null, relicRegion: 'all', mapRegion: 'all', combatCls: '', polyRange: 'all', polySort: 'lv', polySortDesc: false };   // 預設分頁=分頁列第一個(收藏-裝備)。裝備頁的篩選/排序條件由列表篩選引擎(EQ_LF.state)自己保管,不放這裡
   // 搜尋打字防抖:每次按鍵只重設計時器,停手這麼久才真的過濾+重渲染(降低逐字輸入的 INP)。
   var SEARCH_DEBOUNCE_MS = 150;
   var _searchTimer = null;
@@ -1190,6 +1190,8 @@
       // 🗺️ 收藏-遺物的「掉落區域篩選」(按區域看收集進度/缺哪些)
       var rlrg = e.target.closest ? e.target.closest('[data-relicregion]') : null;
       if (rlrg) { state.relicRegion = rlrg.getAttribute('data-relicregion'); render(); return; }
+      var mprg = e.target.closest ? e.target.closest('[data-mapregion]') : null;   // 🗺️ 地圖頁的領域按鈕
+      if (mprg) { state.mapRegion = mprg.getAttribute('data-mapregion'); render(); return; }
       // ⚡ 戰鬥機制頁「角色 × 武器攻速」的職業選擇(見 atkApmHTML)
       var av = e.target.closest ? e.target.closest('[data-atkcls]') : null;
       if (av) { state.combatCls = av.getAttribute('data-atkcls'); render(); return; }
@@ -1402,10 +1404,19 @@
   var CASTLE_EXTRA_CITY = { windwood_dungeon: '風木城' };   // 🏰 攻城後開放的城堡狩獵區 → 要攻下哪座城(作者新增別的城堡狩獵區時補這裡;掉落查詢 afk-dex 亦有一份)
   function renderMap() {
     if (typeof MAP_REGIONS === 'undefined') return '<div class="m-wiki-note">讀不到地圖資料。</div>';
-    var h = '<div class="m-wiki-note">遊戲移動方式：打開<b>地圖選單</b>→ 左邊選<b>領域</b> → 右邊選該領域的<b>地圖</b>直接傳送（受進入條件擋）。「<b>回村</b>」按鈕回到你<b>最近待過的村莊／安全區</b>（沒紀錄才回職業家鄉；血盟持有城堡期間改回城堡）。</div>';
+    var h, moveNote = '遊戲移動方式：打開<b>地圖選單</b>→ 左邊選<b>領域</b> → 右邊選該領域的<b>地圖</b>直接傳送（受進入條件擋）。「<b>回村</b>」按鈕回到你<b>最近待過的村莊／安全區</b>（沒紀錄才回職業家鄉；血盟持有城堡期間改回城堡）。';
     var entryOf = (typeof mapEntryOf === 'function') ? mapEntryOf : function () { return null; };   // 由地圖 v 取 MAP_CATEGORIES 原定義(進入條件)
+    // 領域篩選列(同職業魔法頁的按鈕列):全部／各領域／隱藏與特殊(不在地圖選單的那三組)
+    var SPECIAL = '__special', sel = state.mapRegion || 'all';
+    var regs = MAP_REGIONS.filter(function (r) { return r.maps && r.maps.length; });
+    if (sel !== 'all' && sel !== SPECIAL && !regs.some(function (r) { return r.label === sel; })) sel = 'all';   // 領域被作者改名/移除 → 退回全部
+    var btn = function (k, label) { return '<button type="button" class="m-wiki-mfbtn' + (k === sel ? ' on' : '') + '" data-mapregion="' + esc(k) + '">' + esc(label) + '</button>'; };
+    h = btn('all', '全部') + regs.map(function (r) { return btn(r.label, r.label); }).join('') + btn(SPECIAL, '隱藏與特殊');
+    h = '<div class="m-wiki-mfilter">' + h + '</div>' + '<div class="m-wiki-note">' + moveNote + '</div>';
+    var showReg = function (label) { return sel === 'all' || sel === label; };
+    var showSpecial = sel === 'all' || sel === SPECIAL;
     MAP_REGIONS.forEach(function (reg) {
-      if (!reg.maps || !reg.maps.length) return;
+      if (!reg.maps || !reg.maps.length || !showReg(reg.label)) return;
       h += '<div class="m-wiki-sub">🗺️ ' + esc(reg.label) + '</div>';
       reg.maps.forEach(function (m) {
         var lv = mapLvRange(m.v), e = entryOf(m.v), unlock = e ? mapUnlock(e) : '', bits = [];
@@ -1416,7 +1427,7 @@
       });
     });
     // 🔒 隱藏狩獵區域：不在地圖選單，要在母樓層手動傳送進入（動態讀遊戲 HIDDEN_AREA_PARENT/NAMES，作者新增自動跟上）
-    if (typeof HIDDEN_AREA_PARENT !== 'undefined' && typeof HIDDEN_AREA_NAMES !== 'undefined') {
+    if (showSpecial && typeof HIDDEN_AREA_PARENT !== 'undefined' && typeof HIDDEN_AREA_NAMES !== 'undefined') {
       h += '<div class="m-wiki-sub">🔒 隱藏狩獵區域</div>';
       h += '<div class="m-wiki-note" style="margin-top:0;">這些區域<b>不在地圖選單、無法直接選</b>。進入方式：先到下面對應的「母地圖」那一張，在該圖<b>手動施放「傳送術」或使用「瞬間移動卷軸」</b>就會進入隱藏房（<b>自動瞬移／逃離頭目那種不算</b>，必須手動觸發）。</div>';
       var _h2p = {}; for (var _pz in HIDDEN_AREA_PARENT) _h2p[HIDDEN_AREA_PARENT[_pz]] = _pz;   // 母樓層→隱藏 反轉成 隱藏→母樓層
@@ -1428,7 +1439,7 @@
       });
     }
     // 🏰 攻城後開放的城堡狩獵區(CASTLE_EXTRA,如風木地監):不在 MAP_REGIONS/地圖選單,攻城獲勝後才臨時開放→靜態列不到,這裡補上
-    if (typeof CASTLE_EXTRA !== 'undefined' && CASTLE_EXTRA.length) {
+    if (showSpecial && typeof CASTLE_EXTRA !== 'undefined' && CASTLE_EXTRA.length) {
       h += '<div class="m-wiki-sub">🏰 攻城後開放的狩獵區（城堡限定）</div>';
       h += '<div class="m-wiki-note" style="margin-top:0;">這些圖<b>不在地圖選單</b>，要<b>攻城獲勝</b>後才開放（<b>只要血盟還持有該城就一直開著</b>，城堡被別的血盟奪走才關）。攻城玩法見「血盟」分頁。</div>';
       CASTLE_EXTRA.forEach(function (v) {
@@ -1439,6 +1450,7 @@
       });
     }
     // 🌑 黑暗妖精聖地：3 張 NPC 傳送進入的隱藏圖（不在地圖選單、也不走母樓層傳送）
+    if (!showSpecial) return h;
     h += '<div class="m-wiki-sub">🌑 黑暗妖精聖地（NPC 傳送進入）</div>';
     h += '<div class="m-wiki-note" style="margin-top:0;">高階線（怪約 Lv48~99）。先到安全區「<b>拉斯塔巴德·長老會議廳</b>」找 NPC <b>真．冥皇丹特斯</b>，用道具進入：</div>';
     h += '<div class="m-wiki-kv"><b>' + wDexLink('黑暗妖精聖地') + '</b>　<span class="c-mapunlock">📍 交出 死亡騎士之書 ×1（一般狩獵圖）</span></div>';
