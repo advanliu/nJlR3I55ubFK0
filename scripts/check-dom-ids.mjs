@@ -61,8 +61,8 @@ for (const f of PLUGINS) {
 const missing = [...refs.keys()].filter(id => !produced.has(id)).sort();
 // afk- 前綴＝外掛自建(命名慣例)。自建的 id 若經 helper 傳參建立(mk('afk-wh-allin',…)),本工具抓不到
 //   產生端 → 只提醒不擋。會靜默失效的是「我方引用上游的 id」,那才是要擋的。
-const mine = missing.filter(id => /^afk-/.test(id));
-const upstream = missing.filter(id => !/^afk-/.test(id));
+const mine = missing.filter(id => /^(m-)?afk-/.test(id));
+const upstream = missing.filter(id => !/^(m-)?afk-/.test(id));
 
 console.log(`掃了 ${PLUGINS.length} 支外掛,引用到 ${refs.size} 個字面 DOM id。`);
 if (mine.length) {
