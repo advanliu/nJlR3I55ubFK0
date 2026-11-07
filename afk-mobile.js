@@ -170,7 +170,7 @@
         { id: 'center', label: '⚔️ 戰鬥' },
         { id: 'left', label: '👥 隊伍' },
         { id: 'right', label: '🎒 背包' },
-        { id: 'log', label: '📜 日誌' },
+        { id: 'log', label: '📜 日誌▾' },   // 點開小選單:日誌／小百科(小百科外掛不在就退回直接開關日誌)
         { id: 'logout', label: '🚪 登出' }   // 特判：不是切欄，而是跳確認窗→存檔→回首頁
     ];
     var _navStyled = false;
@@ -191,6 +191,13 @@
             'body.m-mobile #game-screen{padding-bottom:calc(8px + var(--m-nav-h,0px)) !important;}',
             // 核心補跑進度條釘在畫面底部 18px、z-index 只有 90 → 手機會整條躲在導覽列(9600)底下看不到。
             'body.m-mobile #ff-progress-indicator{bottom:calc(10px + var(--m-nav-h,0px)) !important;}',
+            // 「日誌▾」點開的小選單(日誌／小百科)，浮在導覽列正上方
+            'body:not(.m-mobile) #m-logmenu{display:none !important;}',
+            'body.m-mobile #m-logmenu{display:none;position:fixed;bottom:calc(var(--m-nav-h,0px) + 6px);z-index:9650;min-width:140px;background:#0f172a;border:1px solid #475569;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.6);overflow:hidden;}',
+            'body.m-mobile #m-logmenu.open{display:flex;flex-direction:column;}',
+            'body.m-mobile #m-logmenu button{background:transparent;border:none;border-bottom:1px solid #334155;color:#e2e8f0;font-size:14px;font-weight:600;padding:12px 16px;text-align:left;cursor:pointer;}',
+            'body.m-mobile #m-logmenu button:last-child{border-bottom:none;}',
+            'body.m-mobile #m-logmenu button:active{background:#1e293b;}',
             // 浮動日誌面板
             'body.m-mobile #m-log-sheet{display:none;position:fixed;left:0;right:0;bottom:var(--m-nav-h,0px);height:46vh;z-index:9500;background:#0b1222;border-top:2px solid #475569;box-shadow:0 -10px 30px rgba(0,0,0,.6);flex-direction:column;}',
             'body.m-mobile.mlog-open #m-log-sheet{display:flex;}',
@@ -280,6 +287,37 @@
     function openLog() { moveLogToSheet(); document.body.classList.add('mlog-open'); updateNavActive(); }
     function closeLog() { document.body.classList.remove('mlog-open'); updateNavActive(); }
     function toggleLog() { if (document.body.classList.contains('mlog-open')) closeLog(); else openLog(); }
+
+    // --- 「日誌▾」小選單：日誌／小百科 ---
+    //   小百科的入口是 afk-wiki 注入在設定面板的 #m-afk-nav-wiki(遊戲中唯一入口)，這裡直接代按；
+    //   那顆不在(小百科關閉/停用)就沒有第二個選項，點「日誌▾」退回原本的直接開關日誌。
+    function wikiBtn() { return document.getElementById('m-afk-nav-wiki'); }
+    function closeLogMenu() { var m = document.getElementById('m-logmenu'); if (m) m.classList.remove('open'); }
+    function toggleLogMenu(btn) {
+        if (!wikiBtn()) { toggleLog(); return; }
+        var m = document.getElementById('m-logmenu');
+        if (!m) {
+            m = document.createElement('div'); m.id = 'm-logmenu';
+            m.innerHTML = '<button type="button" id="m-logmenu-log"></button><button type="button" id="m-logmenu-wiki">📚 小百科</button>';
+            document.body.appendChild(m);
+            m.querySelector('#m-logmenu-log').addEventListener('click', function () { closeLogMenu(); toggleLog(); });
+            m.querySelector('#m-logmenu-wiki').addEventListener('click', function () {
+                closeLogMenu(); closeLog();
+                var w = wikiBtn(); if (w) w.click();
+            });
+            // 點選單外面收起(點「日誌▾」本身由它自己的 handler 開關，這裡略過避免開了馬上關)
+            document.addEventListener('click', function (e) {
+                if (!m.classList.contains('open')) return;
+                if (e.target.closest && (e.target.closest('#m-logmenu') || e.target.closest('#m-nav [data-view="log"]'))) return;
+                closeLogMenu();
+            });
+        }
+        if (m.classList.contains('open')) { closeLogMenu(); return; }
+        m.querySelector('#m-logmenu-log').textContent = document.body.classList.contains('mlog-open') ? '📜 關閉日誌' : '📜 日誌';
+        m.classList.add('open');
+        var r = btn.getBoundingClientRect(), w = m.offsetWidth;   // 置中於按鈕，夾在螢幕內
+        m.style.left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8) + 'px';
+    }
 
     // --- 登出回首頁：自製確認窗（不用原生 confirm，iOS Safari 會抑制）→ 存檔 → 記離線錨點 → reload ---
     function doLogout() {
@@ -446,7 +484,7 @@
                 var btn = document.createElement('button');
                 btn.className = 'm-nav-btn'; btn.type = 'button';
                 btn.setAttribute('data-view', v.id); btn.textContent = v.label;
-                btn.addEventListener('click', v.id === 'log' ? toggleLog : (v.id === 'logout' ? doLogout : function (id) { return function () { setView(id); }; }(v.id)));
+                btn.addEventListener('click', v.id === 'log' ? function () { toggleLogMenu(this); } : (v.id === 'logout' ? doLogout : function (id) { return function () { closeLogMenu(); setView(id); }; }(v.id)));
                 nav.appendChild(btn);
             });
             document.body.appendChild(nav);
@@ -472,6 +510,7 @@
         if (inGame) buildNav();
         else {
             var nav = document.getElementById('m-nav'); if (nav) nav.remove();
+            var lm = document.getElementById('m-logmenu'); if (lm) lm.remove();
             restoreLog();   // 離開遊戲：日誌搬回原位、收面板
             document.body.classList.remove('mview-left', 'mview-center', 'mview-right');
         }
